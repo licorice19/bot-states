@@ -3,9 +3,6 @@ import os
 
 load_dotenv()
 
-TOKEN = os.getenv("TOKEN", "default_token")
-ADMIN_ID = os.getenv("ADMIN_ID", "default_admin")
+TOKEN = os.getenv("TOKEN", "default")
+ADMIN_IDS = [int(admin_id.strip()) for admin_id in os.getenv("ADMIN_IDS", 'default').split(",") if admin_id.strip()]
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
-
-
-
