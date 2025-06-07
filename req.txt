@@ -20,7 +20,6 @@ pyinstaller-hooks-contrib==2025.4
 pyparsing==3.2.3
 pyTelegramBotAPI==4.27.0
 python-barcode==0.15.1
-python-dotenv==1.1.0
 pywin32-ctypes==0.2.3
 requests==2.32.3
 setuptools==80.8.0
