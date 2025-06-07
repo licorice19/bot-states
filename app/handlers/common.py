@@ -230,8 +230,6 @@ def unauthorized_list_handler(message: types.Message, bot: AppTeleBot):
 
     unknown_users_data = auth_middleware.unknown_users_access_attempts
 
-    print(f"Unknown users data: {unknown_users_data}")  # Для отладки
-
     if not unknown_users_data:
         bot.reply_to(message, "Записей о неавторизованных попытках доступа нет.")
         return
