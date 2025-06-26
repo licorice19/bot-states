@@ -1,17 +1,14 @@
-
 from telebot import TeleBot, types
 from ..states import CodesStates # Убедитесь, что путь к states правильный
 import logging
 from ..utils.barcode_utils import parse_codes_input, generate_ean13_barcode_image_bytes
+from ..utils.saving_and_loading import save_json, load_json
 import random
 from .. import config
 from ..entities import AppTeleBot
 
 
 logger = logging.getLogger(__name__)
-
-# Глобальный словарь user_codes. Для персистентности рассмотрите другое хранилище.
-user_codes = {} 
 
 # --- Вспомогательная функция для проверки админских прав ---
 def is_admin(user_id: int) -> bool:
@@ -56,7 +53,7 @@ def start_handler(message: types.Message, bot: TeleBot):
         text="Привет! Используйте /help для просмотра доступных команд."
     )
 
-def codes_handler(message: types.Message, bot: TeleBot):
+def codes_handler(message: types.Message, bot: AppTeleBot):
     if not message.from_user:
         logger.warning("Codes command received without from_user in message: %s", message.message_id)
         return
@@ -69,11 +66,11 @@ def codes_handler(message: types.Message, bot: TeleBot):
         reply_to_message_id=message.message_id,
     )
     # Очистка предыдущих кодов пользователя при новом вызове /codes
-    if message.from_user.id in user_codes:
-        del user_codes[message.from_user.id]
+    if message.from_user.id in bot.user_barcodes:
+        del bot.user_barcodes[message.from_user.id]
 
 
-def process_codes_input(message: types.Message, bot: TeleBot):
+def process_codes_input(message: types.Message, bot: AppTeleBot):
     if not message.from_user: return # Добавим проверку
     if message.text and message.text.startswith('/'):
         bot.delete_state(message.from_user.id, message.chat.id)
@@ -94,9 +91,10 @@ def process_codes_input(message: types.Message, bot: TeleBot):
         return
     
     # Сохраняем коды в словаре user_codes; для личных чатов user_id == chat_id
-    user_codes[message.from_user.id] = codes
+    bot.user_barcodes[message.from_user.id] = codes
 
     bot.delete_state(message.from_user.id, message.chat.id)
+    save_json(bot.user_barcodes)
     bot.send_message(
         message.chat.id,
         f"Коды успешно загружены ({len(codes)} шт.).\n"
@@ -104,12 +102,14 @@ def process_codes_input(message: types.Message, bot: TeleBot):
         reply_to_message_id=message.message_id,
     )
 
-def mycodes_handler(message: types.Message, bot: TeleBot):
+def mycodes_handler(message: types.Message, bot: AppTeleBot):
     if not message.from_user:
         logger.warning("Mycodes command received without from_user in message: %s", message.message_id)
         return
 
-    codes = user_codes.get(message.from_user.id, [])
+    codes = bot.user_barcodes.get(message.from_user.id, [])
+    print(f"Barcodes: {bot.user_barcodes}")  # Для отладки
+    print(f"User {message.from_user.id} has codes: {codes}")  # Для отладки
     if codes:
         codes_text = "\n".join(codes)
         bot.send_message(
@@ -125,7 +125,7 @@ def mycodes_handler(message: types.Message, bot: TeleBot):
             reply_to_message_id=message.message_id,
         )
 
-def gen_handler(message: types.Message, bot: TeleBot):
+def gen_handler(message: types.Message, bot: AppTeleBot):
     if not message.from_user: return
     
     args = (message.text or "").split(maxsplit=1)
@@ -146,7 +146,7 @@ def gen_handler(message: types.Message, bot: TeleBot):
     else:
         # Генерация из списка пользователя (только если это личный чат)
         if message.from_user.id == message.chat.id:
-            codes = user_codes.get(message.from_user.id, [])
+            codes = bot.user_barcodes.get(message.from_user.id, [])
             if codes:
                 code_to_gen = random.choice(codes)
             else:
